@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xray VLESS Reality — MikroTik Offline Command Generator</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f5f6f8;
+            --surface: #ffffff;
+            --border: #d1d5db;
+            --border-focus: #6366f1;
+            --text: #111827;
+            --text-muted: #6b7280;
+            --accent: #4f46e5;
+            --accent-hover: #4338ca;
+            --success: #059669;
+            --success-bg: #ecfdf5;
+            --error: #dc2626;
+            --error-bg: #fef2f2;
+            --tag-ok: #d1fae5;
+            --tag-ok-text: #065f46;
+            --tag-miss: #fee2e2;
+            --tag-miss-text: #991b1b;
+            --mono: 'Cascadia Code', 'Fira Code', 'Consolas', 'Courier New', monospace;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 24px 16px 48px;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        header { margin-bottom: 32px; }
+        header h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 6px; }
+        header p { color: var(--text-muted); font-size: 0.95rem; }
+
+        .header-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        #lang-toggle {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text);
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        #lang-toggle:hover { background: #e5e7eb; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 14px; }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        textarea {
+            width: 100%;
+            font-family: var(--mono);
+            font-size: 0.82rem;
+            line-height: 1.5;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            resize: vertical;
+            background: #fafafa;
+            color: var(--text);
+            transition: border-color 0.15s;
+            min-height: 80px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+        textarea::placeholder { color: #9ca3af; }
+
+        select, input[type="text"] {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fafafa;
+            color: var(--text);
+            transition: border-color 0.15s;
+        }
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+
+        .radio-group { display: flex; gap: 20px; flex-wrap: wrap; }
+        .radio-group label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 400;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            user-select: none;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-secondary { background: #f3f4f6; color: var(--text); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .btn-sm { padding: 4px 10px; font-size: 0.75rem; border-radius: 4px; }
+
+        .actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+
+        .fields-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .field-tag {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: var(--mono);
+            gap: 8px;
+        }
+        .field-tag.ok { background: var(--tag-ok); color: var(--tag-ok-text); }
+        .field-tag.miss { background: var(--tag-miss); color: var(--tag-miss-text); }
+        .field-tag .fname { font-weight: 600; }
+        .field-tag .fval {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 130px;
+            opacity: 0.8;
+        }
+
+        .output-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        pre.out-block {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            line-height: 1.6;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            white-space: pre;
+            tab-size: 2;
+        }
+        pre.out-block .comment { color: #64748b; }
+        pre.out-block .cmd { color: #7dd3fc; }
+
+        .alert {
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.875rem;
+            margin-top: 12px;
+        }
+        .alert-error { background: var(--error-bg); border: 1px solid #fca5a5; color: var(--error); }
+        .alert-warning { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+
+        #errors-container { margin-bottom: 4px; }
+        #parsed-section, #output-section, #routing-section, #uninstall-section { display: none; }
+
+        .hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+
+        .scenario-panel {
+            margin-top: 10px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .scenario-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .checkbox-grid label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 400;
+            cursor: pointer;
+            font-size: 0.82rem;
+            padding: 4px 6px;
+            border-radius: 4px;
+            transition: background 0.1s;
+        }
+        .checkbox-grid label:hover { background: #f3f4f6; }
+
+        .domain-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--tag-ok);
+            color: var(--tag-ok-text);
+            font-size: 0.82rem;
+            font-family: var(--mono);
+        }
+        .domain-tag button {
+            background: none; border: none; color: inherit; cursor: pointer;
+            font-size: 1rem; line-height: 1; padding: 0 2px; opacity: 0.7;
+        }
+        .domain-tag button:hover { opacity: 1; }
+
+        .ip-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; }
+        .ip-row > div { display: flex; flex-direction: column; gap: 4px; }
+        .ip-row input[type="text"] { width: 180px; }
+
+        pre.collapsed { max-height: calc(15 * 1.6em); overflow: hidden; position: relative; }
+        pre.collapsed::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 3em;
+            background: linear-gradient(transparent, #0f172a);
+            pointer-events: none;
+        }
+        .btn-expand {
+            display: block; width: 100%; margin-top: 4px; padding: 6px;
+            background: #1e293b; color: #94a3b8; border: 1px solid #334155;
+            border-radius: 0 0 8px 8px; font-size: 0.8rem; cursor: pointer; text-align: center;
+        }
+        .btn-expand:hover { background: #334155; color: #e2e8f0; }
+
+        footer { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 40px; }
+
+        .dns-info-icon {
+            display: inline-block; cursor: help; font-size: 1rem;
+            color: var(--accent); position: relative;
+        }
+        .dns-info-icon:hover::after {
+            content: attr(title);
+            position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: #e2e8f0; padding: 8px 12px; border-radius: 6px;
+            font-size: 0.75rem; white-space: pre-line; width: 320px; z-index: 10;
+            pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); line-height: 1.5;
+        }
+
+        input[type="radio"], input[type="checkbox"] { accent-color: var(--accent); }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #111111; --surface: #1e1e1e; --border: #333333;
+                --border-focus: #f97316; --text: #e8e8e8; --text-muted: #888888;
+                --accent: #f97316; --accent-hover: #ea580c;
+                --success: #22c55e; --success-bg: #14532d;
+                --error: #f87171; --error-bg: #2d1515;
+                --tag-ok: #14532d; --tag-ok-text: #86efac;
+                --tag-miss: #450a0a; --tag-miss-text: #fca5a5;
+            }
+            #lang-toggle:hover { background: #2a2a2a; }
+            textarea { background: #242424; }
+            textarea:focus { background: #1a1a1a; box-shadow: 0 0 0 3px rgba(249,115,22,0.15); }
+            textarea::placeholder { color: #555; }
+            select, input[type="text"] { background: #242424; }
+            select:focus, input[type="text"]:focus { background: #1a1a1a; box-shadow: 0 0 0 3px rgba(249,115,22,0.15); }
+            .btn-secondary { background: #2a2a2a; }
+            .btn-secondary:hover { background: #333; }
+            .scenario-panel { background: #242424; }
+            .checkbox-grid label:hover { background: #2a2a2a; }
+            .alert-warning { background: #2a1a00; border-color: #92400e; color: #fcd34d; }
+            pre.collapsed::after { background: linear-gradient(transparent, #0f172a); }
+        }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.4rem; }
+            .card { padding: 16px; }
+            pre.out-block { font-size: 0.72rem; padding: 14px; }
+            .dns-info-icon:hover::after { width: 240px; left: 0; transform: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <div class="header-row">
+            <div>
+                <h1 data-i18n="title">Xray VLESS Reality &mdash; MikroTik Offline Command Generator</h1>
+                <p data-i18n="subtitle">Вставьте VLESS URL из 3x-ui для генерации готовых команд RouterOS</p>
+            </div>
+            <button id="lang-toggle" onclick="setLang(currentLang==='ru'?'en':'ru')">EN</button>
+        </div>
+    </header>
+
+    <div class="card">
+        <div class="card-title" data-i18n="confTitle">VLESS URL</div>
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;line-height:1.5" data-i18n="privacy">Вся обработка происходит локально в браузере. Данные никуда не отправляются.</p>
+
+        <label for="vless-input" data-i18n="confLabel">VLESS URL (из раздела "Details" в 3x-ui)</label>
+        <textarea id="vless-input"
+            placeholder="vless://UUID@domain:443?type=xhttp&encryption=none&security=reality&pbk=...&fp=chrome&sni=yahoo.com&sid=...&path=%2F&host=&mode=auto#name"
+            oninput="onInputChange()"></textarea>
+
+        <div style="margin-top:14px">
+            <label data-i18n="scenarioLabel">Сценарий маршрутизации</label>
+            <div class="radio-group">
+                <label><input type="radio" name="scenario" value="dns-fwd" checked onchange="onScenarioChange()"> <span data-i18n="scenarioDns">DNS-маршрутизация сервисов</span></label>
+                <label><input type="radio" name="scenario" value="tunnel" onchange="onScenarioChange()"> <span data-i18n="scenarioTunnel">Только туннель (ручные маршруты)</span></label>
+                <label><input type="radio" name="scenario" value="non-ru" onchange="onScenarioChange()"> <span data-i18n="scenarioNonRu">Весь не-RU трафик через туннель</span></label>
+            </div>
+            <div id="scenario-hint" class="hint" data-i18n="scenarioDnsHint"></div>
+        </div>
+
+        <div id="non-ru-warn" class="alert alert-error" style="display:none;margin-top:8px" data-i18n="scenarioNonRuWarn"></div>
+        <div id="fasttrack-warn" class="alert alert-warning" style="margin-top:8px" data-i18n="warnFasttrack"></div>
+
+        <div id="doh-panel" style="margin-top:14px">
+            <label data-i18n="dohForwarderLabel">DNS-forwarder (DoH)</label>
+            <div class="radio-group" id="doh-selector">
+                <label><input type="radio" name="doh-fwd" value="GoogleDNS" checked> Google</label>
+                <label><input type="radio" name="doh-fwd" value="CloudFlare"> CloudFlare</label>
+                <label><input type="radio" name="doh-fwd" value="Comss"> Comss</label>
+                <label><input type="radio" name="doh-fwd" value="Quad9"> Quad9</label>
+                <label><input type="radio" name="doh-fwd" value="Yandex"> Yandex</label>
+                <label><input type="radio" name="doh-fwd" value="__custom"> <span data-i18n="dohCustom">Свой...</span></label>
+            </div>
+            <input type="text" id="doh-custom-url" placeholder="https://your-dns/dns-query" style="display:none;margin-top:6px;width:100%">
+            <div class="hint" data-i18n="dohHint"></div>
+        </div>
+
+        <div id="services-panel" class="scenario-panel" style="margin-top:14px">
+            <div class="scenario-panel-header">
+                <label style="margin-bottom:0" data-i18n="servicesLabel">Сервисы для маршрутизации через туннель</label>
+                <div>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleAllServices(true)" data-i18n="btnSelectAll">Все</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleAllServices(false)" data-i18n="btnDeselectAll">Снять</button>
+                </div>
+            </div>
+            <div id="services-grid" class="checkbox-grid"></div>
+            <div id="custom-domains-section" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+                <label style="font-weight:600;font-size:0.9rem" data-i18n="customDomainsLabel">Свои домены</label>
+                <div style="display:flex;gap:6px;margin-top:6px">
+                    <input type="text" id="custom-domain-input" placeholder="example.com" style="flex:1;min-width:0"
+                        onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomDomain()}">
+                    <button class="btn btn-secondary btn-sm" onclick="addCustomDomain()">+</button>
+                </div>
+                <div id="custom-domains-list" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px"></div>
+            </div>
+        </div>
+
+        <div id="exclusions-panel" style="display:none;margin-top:14px" class="scenario-panel">
+            <div class="scenario-panel-header">
+                <label style="margin-bottom:0" data-i18n="exclusionsLabel">Исключить из туннеля (оставить прямое соединение)</label>
+            </div>
+            <div id="exclusions-grid" class="checkbox-grid"></div>
+        </div>
+
+        <div id="netwatch-row" style="margin-top:14px">
+            <label><input type="checkbox" id="netwatch-enable" checked>
+            <span data-i18n="netwatchLabel">Netwatch failover</span></label>
+            <div class="hint" data-i18n="netwatchHint"></div>
+        </div>
+
+        <div style="margin-top:14px">
+            <label data-i18n="archLabel">Архитектура роутера</label>
+            <div class="radio-group">
+                <label><input type="radio" name="arch" value="arm64" checked> ARMv8 / ARM64 (hAP ax², RB5009, CCR2004…)</label>
+                <label><input type="radio" name="arch" value="arm"> ARMv7 (hAP ac², hAP ac lite…)</label>
+                <label><input type="radio" name="arch" value="amd64"> x86 / amd64</label>
+            </div>
+        </div>
+
+        <div style="margin-top:14px">
+            <label for="storage-select" data-i18n="storageLabel">Хранилище контейнера</label>
+            <select id="storage-select" onchange="onStorageChange()">
+                <option value="__auto" data-i18n="sAuto">Авто (usb1/ → disk1/)</option>
+                <option value="disk1" data-i18n="sDisk1">disk1/ — встроенная память</option>
+                <option value="usb1" data-i18n="sUsb1">usb1/ — USB флешка</option>
+                <option value="usb1-part1">usb1-part1/ — USB раздел</option>
+                <option value="usb2">usb2/ — USB флешка (2-я)</option>
+                <option value="sd1">sd1/ — SD / microSD</option>
+                <option value="nvme1">nvme1/ — NVMe SSD</option>
+                <option value="sata1">sata1/ — SATA диск</option>
+                <option value="__custom" data-i18n="sCustom">Свой...</option>
+            </select>
+            <input type="text" id="storage-custom" placeholder="например sata1-part1" style="display:none;margin-top:6px;width:200px">
+        </div>
+
+        <div class="ip-row">
+            <div>
+                <label for="router-ip" data-i18n="routerIpLabel">IP роутера (veth)</label>
+                <input type="text" id="router-ip" value="172.18.20.5" placeholder="172.18.20.5" readonly style="background:#f3f4f6;color:#6b7280;cursor:not-allowed">
+            </div>
+            <div>
+                <label for="container-ip" data-i18n="containerIpLabel">IP контейнера (veth)</label>
+                <input type="text" id="container-ip" value="172.18.20.6" placeholder="172.18.20.6" readonly style="background:#f3f4f6;color:#6b7280;cursor:not-allowed">
+            </div>
+        </div>
+        <div class="hint" data-i18n="vethHint" style="margin-top:4px"></div>
+        <div style="margin-top:6px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:0.82rem;color:#9a3412" data-i18n="vethWarn"></div>
+
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="generate()" data-i18n="btnGenerate">Сгенерировать команды</button>
+            <button class="btn btn-secondary" onclick="clearAll()" data-i18n="btnClear">Очистить</button>
+        </div>
+    </div>
+
+    <div id="errors-container"></div>
+
+    <div id="parsed-section" class="card">
+        <div class="card-title" data-i18n="parsedTitle">Распознанные параметры</div>
+        <div id="fields-display"></div>
+    </div>
+
+    <div id="output-section" class="card">
+        <div class="output-header">
+            <div class="card-title" style="margin-bottom:0" data-i18n="outputTitle">Шаг 1: Установка контейнера Xray</div>
+            <button class="btn btn-secondary" id="copy-btn" onclick="copyOutput('output','copy-btn')" data-i18n="btnCopy">Копировать</button>
+        </div>
+        <pre id="output" class="out-block"></pre>
+        <button class="btn-expand" id="expand-output" onclick="toggleCollapse('output','expand-output')" style="display:none" data-i18n="btnExpand">Показать всё</button>
+    </div>
+
+    <div id="routing-section" class="card">
+        <div class="output-header">
+            <div class="card-title" style="margin-bottom:0" data-i18n="routingTitle">Шаг 2: Настройка маршрутизации</div>
+            <button class="btn btn-secondary" id="copy-routing-btn" onclick="copyOutput('routing-output','copy-routing-btn')" data-i18n="btnCopyRouting">Копировать</button>
+        </div>
+        <div class="alert alert-warning" data-i18n="routingNote"></div>
+        <pre id="routing-output" class="out-block" style="margin-top:10px"></pre>
+        <button class="btn-expand" id="expand-routing" onclick="toggleCollapse('routing-output','expand-routing')" style="display:none" data-i18n="btnExpand">Показать всё</button>
+    </div>
+
+    <div id="uninstall-section" class="card">
+        <div class="output-header">
+            <div class="card-title" style="margin-bottom:0" data-i18n="uninstallTitle">Команды удаления</div>
+            <button class="btn btn-secondary" id="copy-uninstall-btn" onclick="copyOutput('uninstall-output','copy-uninstall-btn')" data-i18n="btnCopyUn">Копировать</button>
+        </div>
+        <pre id="uninstall-output" class="out-block"></pre>
+        <button class="btn-expand" id="expand-uninstall" onclick="toggleCollapse('uninstall-output','expand-uninstall')" style="display:none" data-i18n="btnExpand">Показать всё</button>
+    </div>
+
+    <footer data-i18n="footer">Работает полностью офлайн — данные не покидают браузер.</footer>
+</div>
+
+<script>
+'use strict';
+
+// ================================================================
+// i18n
+// ================================================================
+var currentLang = 'ru';
+
+var I18N = {
+    en: {
+        title: 'Xray VLESS Reality — MikroTik Offline Command Generator',
+        subtitle: 'Paste your VLESS URL from 3x-ui to generate ready-to-use MikroTik RouterOS commands',
+        privacy: 'All processing happens locally in your browser. No data is transmitted anywhere.',
+        confTitle: 'VLESS URL',
+        confLabel: 'VLESS URL (from "Details" section in 3x-ui)',
+        scenarioLabel: 'Routing scenario',
+        scenarioDns: 'DNS-based routing for services',
+        scenarioTunnel: 'Tunnel only (manual routes)',
+        scenarioNonRu: 'All non-RU traffic through tunnel',
+        scenarioDnsHint: 'Routes traffic to selected services through the tunnel using DNS forwarding (DoH). MikroTik resolves domains via DNS-over-HTTPS and collects IPs into address lists. Firewall mangle rules then route this traffic through the Xray container.',
+        scenarioTunnelHint: 'Sets up the container infrastructure only. Add IPs/subnets to the address list manually.',
+        scenarioNonRuHint: 'All traffic goes through the tunnel except Russian IP ranges (auto-updated daily).',
+        scenarioNonRuWarn: 'WARNING: All foreign traffic will go through VPN. A typical household with video services easily consumes 10+ TB/month.',
+        warnFasttrack: 'FastTrack rules will be modified (out-interface-list=WAN) to keep FastTrack active for non-VPN traffic. Uninstall script restores them.',
+        dohForwarderLabel: 'DNS forwarder (DoH)',
+        dohCustom: 'Custom...',
+        dohHint: 'All services will use this DNS-over-HTTPS provider for domain resolution.',
+        servicesLabel: 'Services to route through tunnel',
+        exclusionsLabel: 'Exclude from tunnel (keep direct)',
+        btnSelectAll: 'Select all',
+        btnDeselectAll: 'Deselect all',
+        customDomainsLabel: 'Custom domains',
+        netwatchLabel: 'Netwatch failover',
+        netwatchHint: 'Monitors tunnel by pinging 1.1.1.1 through the container. If the container is unreachable, disables the route. Re-enables when it recovers.',
+        archLabel: 'Router architecture',
+        storageLabel: 'Container storage',
+        sAuto: 'Auto (usb1/ → disk1/)',
+        sDisk1: 'disk1/ — internal storage',
+        sUsb1: 'usb1/ — USB flash drive',
+        sCustom: 'Custom...',
+        routerIpLabel: 'Router IP (veth)',
+        containerIpLabel: 'Container IP (veth)',
+        vethHint: 'Fixed /30 subnet required by the container image.',
+        vethWarn: '⚠ These IPs are hardcoded inside the catesin/xray-mikrotik image (start.sh). Changing them will break the container — it will fail to resolve the server address and set up routes.',
+        btnGenerate: 'Generate commands',
+        btnClear: 'Clear',
+        parsedTitle: 'Parsed parameters',
+        outputTitle: 'Step 1: Install Xray Container',
+        btnCopy: 'Copy',
+        routingTitle: 'Step 2: Routing Setup',
+        btnCopyRouting: 'Copy routing',
+        routingNote: 'Paste this AFTER Step 1 completes and the container starts.',
+        uninstallTitle: 'Uninstall Commands',
+        btnCopyUn: 'Copy uninstall',
+        footer: 'Works entirely offline — no data leaves your browser.',
+        errEmpty: 'VLESS URL is empty.',
+        errInvalid: 'Invalid VLESS URL. Must start with vless://',
+        errIp: 'Invalid IP address.',
+        errMissingFields: 'VLESS URL is missing required fields: ',
+        errNoService: 'Select at least one service or add a custom domain.',
+        errTitle: 'Errors:',
+        copied: 'Copied!',
+        btnExpand: 'Show all',
+        btnCollapse: 'Collapse',
+        dnsBrowserHint: 'Disable Secure DNS (DoH) in your browser.\nChrome: Settings → Privacy → Security → Use secure DNS → Off\nFirefox: Settings → Privacy → DNS over HTTPS → Off\nEdge: Settings → Privacy → Security → Use secure DNS → Off\nOtherwise MikroTik will not see your DNS queries.'
+    },
+    ru: {
+        title: 'Xray VLESS Reality — MikroTik Offline Command Generator',
+        subtitle: 'Вставьте VLESS URL из 3x-ui для генерации готовых команд RouterOS',
+        privacy: 'Вся обработка происходит локально в браузере. Данные никуда не отправляются.',
+        confTitle: 'VLESS URL',
+        confLabel: 'VLESS URL (из раздела "Details" в 3x-ui)',
+        scenarioLabel: 'Сценарий маршрутизации',
+        scenarioDns: 'DNS-маршрутизация сервисов',
+        scenarioTunnel: 'Только туннель (ручные маршруты)',
+        scenarioNonRu: 'Весь не-RU трафик через туннель',
+        scenarioDnsHint: 'Направляет трафик выбранных сервисов через туннель с помощью DNS-форвардинга (DoH). MikroTik резолвит домены через DNS-over-HTTPS и собирает IP в адресные списки.',
+        scenarioTunnelHint: 'Настраивает только инфраструктуру контейнера. IP-адреса для маршрутизации добавляете в адресный список вручную.',
+        scenarioNonRuHint: 'Весь трафик идёт через туннель, кроме российских IP-диапазонов (автообновление раз в день).',
+        scenarioNonRuWarn: 'ВНИМАНИЕ: весь зарубежный трафик пойдёт через VPN. Среднестатистический дом с видеосервисами легко потребляет 10+ ТБ/мес.',
+        warnFasttrack: 'Правила FastTrack будут изменены (out-interface-list=WAN), чтобы FastTrack оставался активным для остального трафика. Скрипт удаления восстановит оригинальные настройки.',
+        dohForwarderLabel: 'DNS-форвардер (DoH)',
+        dohCustom: 'Свой...',
+        dohHint: 'Все сервисы будут использовать этот DoH-провайдер для резолвинга доменов.',
+        servicesLabel: 'Сервисы для маршрутизации через туннель',
+        exclusionsLabel: 'Исключить из туннеля (оставить прямое соединение)',
+        btnSelectAll: 'Все',
+        btnDeselectAll: 'Снять',
+        customDomainsLabel: 'Свои домены',
+        netwatchLabel: 'Netwatch failover',
+        netwatchHint: 'Мониторинг туннеля через пинг 1.1.1.1 через контейнер. Если контейнер недоступен, маршрут отключается, трафик идёт напрямую.',
+        archLabel: 'Архитектура роутера',
+        storageLabel: 'Хранилище контейнера',
+        sAuto: 'Авто (usb1/ → disk1/)',
+        sDisk1: 'disk1/ — встроенная память',
+        sUsb1: 'usb1/ — USB флешка',
+        sCustom: 'Свой...',
+        routerIpLabel: 'IP роутера (veth)',
+        containerIpLabel: 'IP контейнера (veth)',
+        vethHint: 'Фиксированная /30-подсеть, необходимая образу контейнера.',
+        vethWarn: '⚠ Эти адреса зашиты в образе catesin/xray-mikrotik (start.sh). Изменение приведёт к ошибкам: контейнер не сможет зарезолвить адрес сервера и настроить маршруты.',
+        btnGenerate: 'Сгенерировать команды',
+        btnClear: 'Очистить',
+        parsedTitle: 'Распознанные параметры',
+        outputTitle: 'Шаг 1: Установка контейнера Xray',
+        btnCopy: 'Копировать',
+        routingTitle: 'Шаг 2: Настройка маршрутизации',
+        btnCopyRouting: 'Копировать',
+        routingNote: 'Выполняйте ПОСЛЕ того, как контейнер запустится (Step 1).',
+        uninstallTitle: 'Команды удаления',
+        btnCopyUn: 'Копировать',
+        footer: 'Работает полностью офлайн — данные не покидают браузер.',
+        errEmpty: 'VLESS URL пустой.',
+        errInvalid: 'Неверный VLESS URL. Должен начинаться с vless://',
+        errIp: 'Неверный IP-адрес.',
+        errMissingFields: 'В VLESS URL отсутствуют обязательные поля: ',
+        errNoService: 'Выберите хотя бы один сервис или добавьте свой домен.',
+        errTitle: 'Ошибки:',
+        copied: 'Скопировано!',
+        btnExpand: 'Показать всё',
+        btnCollapse: 'Свернуть',
+        dnsBrowserHint: 'Отключите Безопасный DNS в браузере.\nChrome: Настройки → Конфиденциальность → Безопасность → Безопасный DNS → Выкл\nFirefox: Настройки → Приватность → DNS через HTTPS → Выкл'
+    }
+};
+
+function t(key) { return (I18N[currentLang] || I18N.ru)[key] || key; }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function setLang(lang) {
+    currentLang = lang;
+    document.getElementById('lang-toggle').textContent = lang === 'ru' ? 'EN' : 'RU';
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+        var key = el.getAttribute('data-i18n');
+        if (key) el.textContent = t(key);
+    });
+    onScenarioChange();
+    document.getElementById('doh-custom-url').placeholder = t('dohCustom') === 'Свой...' ? 'https://your-dns/dns-query' : 'https://your-dns/dns-query';
+}
+
+// ================================================================
+// Data
+// ================================================================
+var SERVICES = {
+    claude:    {list:'Claude',    d:['claude.ai','anthropic.com'], on:true},
+    discord:   {list:'Discord',   d:['discord.com','discord.gg','discordapp.com','discordapp.net','dis.gd','discord.media'], on:true},
+    gemini:    {list:'Gemini',    d:['gemini.google.com','aistudio.google.com','generativelanguage.googleapis.com','deepmind.google','deepmind.com'], on:false},
+    google:    {list:'GoogleWeb', d:['google.com','googleapis.com','gstatic.com','google-analytics.com','googleusercontent.com'], on:false},
+    instagram: {list:'Instagram', d:['ig.me','instagram.com','cdninstagram.com','instagram.net'], on:true},
+    netflix:   {list:'NetFlix',   d:['netflix.com','netflix.net','nflximg.com','nflximg.net','nflxvideo.net','nflxso.net','nflxext.com','fast.com'], on:true},
+    openai:    {list:'OpenAI',    d:['openai.com','chatgpt.com','sora.com','oaiusercontent.com','oaistatic.com'], on:true},
+    spotify:   {list:'Spotify',   d:['spotify.com','spoti.fi','scdn.co','spotifycdn.com'], on:true},
+    steam:     {list:'Steam',     d:['steampowered.com','steamcommunity.com','steamstatic.com','steamgames.com'], on:false},
+    telegram:  {list:'Telegram',  d:['telegram.org','t.me','telesco.pe','tdesktop.com','telegram.me','telegra.ph'], on:true},
+    tiktok:    {list:'TikTok',    d:['tiktok.com','tiktokcdn.com','tiktokv.com','musical.ly','byteimg.com'], on:true},
+    twitter:   {list:'Twitter',   d:['twitter.com','x.com','t.co','twimg.com'], on:true},
+    youtube:   {list:'YouTube',   d:['youtube.com','youtu.be','googlevideo.com','ytimg.com','yt3.ggpht.com','youtube-nocookie.com'], on:true}
+};
+
+var EXCLUSIONS = {
+    steam:     {list:'Steam',     d:['steampowered.com','steamcommunity.com','steamstatic.com','steamgames.com'], on:true},
+    epic:      {list:'EpicGames', d:['epicgames.com','unrealengine.com','fortnite.com'], on:false},
+    blizzard:  {list:'Blizzard',  d:['blizzard.com','battle.net'], on:false},
+    apple:     {list:'Apple',     d:['apple.com','icloud.com','mzstatic.com'], on:false},
+    microsoft: {list:'Microsoft', d:['microsoft.com','windowsupdate.com','live.com','office.com'], on:false}
+};
+
+var DOH_FORWARDERS = [
+    {name:'GoogleDNS',  doh:'https://dns.google/dns-query'},
+    {name:'CloudFlare', doh:'https://cloudflare-dns.com/dns-query'},
+    {name:'Comss',      doh:'https://dns.comss.one/mikrotik'},
+    {name:'Quad9',      doh:'https://dns.quad9.net/dns-query'},
+    {name:'Yandex',     doh:'https://common.dot.dns.yandex.net/dns-query'}
+];
+
+var DNS_STATICS = [
+    {addr:'8.8.8.8',           comment:'DNS GoogleDNS',  name:'dns.google'},
+    {addr:'8.8.4.4',           comment:'DNS GoogleDNS',  name:'dns.google'},
+    {addr:'1.1.1.1',           comment:'DNS CloudFlare', name:'cloudflare-dns.com'},
+    {addr:'1.0.0.1',           comment:'DNS CloudFlare', name:'cloudflare-dns.com'},
+    {addr:'195.133.25.16',     comment:'DNS Comss',      name:'dns.comss.one'},
+    {addr:'9.9.9.9',           comment:'DNS Quad9',      name:'dns.quad9.net'},
+    {addr:'149.112.112.112',   comment:'DNS Quad9',      name:'dns.quad9.net'},
+    {addr:'77.88.8.8',         comment:'DNS Yandex',     name:'common.dot.dns.yandex.net'},
+    {addr:'77.88.8.1',         comment:'DNS Yandex',     name:'common.dot.dns.yandex.net'}
+];
+
+var RU_RANGES_URL = 'https://github.com/timbrs/amneziawg-mikrotik-c/releases/latest/download/ru_ranges.rsc';
+
+// ================================================================
+// VLESS URL parser
+// ================================================================
+function parseVlessURL(raw) {
+    raw = raw.trim();
+    if (!raw.startsWith('vless://')) return null;
+    var rest = raw.slice(8);
+    var hashPos = rest.indexOf('#');
+    var name = hashPos >= 0 ? decodeURIComponent(rest.slice(hashPos + 1)) : '';
+    rest = hashPos >= 0 ? rest.slice(0, hashPos) : rest;
+    var atPos = rest.indexOf('@');
+    if (atPos < 0) return null;
+    var id = rest.slice(0, atPos);
+    rest = rest.slice(atPos + 1);
+    var qPos = rest.indexOf('?');
+    var hostPort = qPos >= 0 ? rest.slice(0, qPos) : rest;
+    var query = qPos >= 0 ? rest.slice(qPos + 1) : '';
+    var host, port;
+    if (hostPort.charAt(0) === '[') {
+        var bracketEnd = hostPort.indexOf(']');
+        host = hostPort.slice(1, bracketEnd);
+        port = hostPort.slice(bracketEnd + 2);
+    } else {
+        var lastColon = hostPort.lastIndexOf(':');
+        host = lastColon >= 0 ? hostPort.slice(0, lastColon) : hostPort;
+        port = lastColon >= 0 ? hostPort.slice(lastColon + 1) : '443';
+    }
+    var params = {};
+    if (query) {
+        query.split('&').forEach(function(pair) {
+            var eq = pair.indexOf('=');
+            if (eq >= 0) {
+                var k = decodeURIComponent(pair.slice(0, eq));
+                var v = decodeURIComponent(pair.slice(eq + 1).replace(/\+/g, ' '));
+                params[k] = v;
+            }
+        });
+    }
+    return {
+        id: id, host: host, port: port || '443', name: name,
+        transport:   params.type       || 'tcp',
+        encryption:  params.encryption || 'none',
+        security:    params.security   || 'reality',
+        pbk:         params.pbk        || '',
+        fp:          params.fp         || '',
+        sni:         params.sni        || '',
+        sid:         params.sid        || '',
+        spx:         params.spx        || '/',
+        xhttpPath:   decodeURIComponent(params.path || '/'),
+        xhttpHost:   params.host       || '',
+        xhttpMode:   params.mode       || 'auto'
+    };
+}
+
+// ================================================================
+// UI helpers
+// ================================================================
+function getScenario() {
+    var r = document.getElementsByName('scenario');
+    for (var i = 0; i < r.length; i++) if (r[i].checked) return r[i].value;
+    return 'dns-fwd';
+}
+function getArch() {
+    var r = document.getElementsByName('arch');
+    for (var i = 0; i < r.length; i++) if (r[i].checked) return r[i].value;
+    return 'arm64';
+}
+function getPrefix() { return 'xray-vless'; }
+function getStorage() {
+    var sel = document.getElementById('storage-select').value;
+    if (sel === '__custom') return document.getElementById('storage-custom').value.trim();
+    return sel;
+}
+function getDohForwarder() {
+    var r = document.getElementsByName('doh-fwd');
+    for (var i = 0; i < r.length; i++) if (r[i].checked) return r[i].value;
+    return 'GoogleDNS';
+}
+function getDohInfo(name) {
+    if (name === '__custom') {
+        var u = document.getElementById('doh-custom-url').value.trim();
+        return u.startsWith('https://') ? {doh:u,name:'CustomDoH',isDoH:true} : {addr:u,name:'CustomDNS',isDoH:false};
+    }
+    for (var i = 0; i < DOH_FORWARDERS.length; i++)
+        if (DOH_FORWARDERS[i].name === name) return {doh:DOH_FORWARDERS[i].doh, name:name, isDoH:true};
+    return {doh:DOH_FORWARDERS[0].doh, name:DOH_FORWARDERS[0].name, isDoH:true};
+}
+function getDnsStaticsFor(name) {
+    return DNS_STATICS.filter(function(s) { return s.comment === 'DNS ' + name; });
+}
+function getSelectedServices() {
+    var cb = document.querySelectorAll('#services-grid input[name="svc"]:checked');
+    var r = [];
+    cb.forEach(function(el) { r.push(el.value); });
+    return r;
+}
+function getSelectedExclusions() {
+    var cb = document.querySelectorAll('#exclusions-grid input[name="excl"]:checked');
+    var r = [];
+    cb.forEach(function(el) { r.push(el.value); });
+    return r;
+}
+function getCustomDomains() {
+    var tags = document.querySelectorAll('#custom-domains-list .domain-tag');
+    var r = [];
+    tags.forEach(function(el) { r.push(el.getAttribute('data-domain')); });
+    return r;
+}
+function isValidIP(ip) {
+    return /^(\d{1,3}\.){3}\d{1,3}$/.test(ip) && ip.split('.').every(function(p){ return parseInt(p) <= 255; });
+}
+function onInputChange() { /* reset output on edit */ }
+function onStorageChange() {
+    var sel = document.getElementById('storage-select').value;
+    document.getElementById('storage-custom').style.display = sel === '__custom' ? 'inline-block' : 'none';
+}
+function onScenarioChange() {
+    var s = getScenario();
+    document.getElementById('doh-panel').style.display = (s === 'dns-fwd' || s === 'non-ru') ? 'block' : 'none';
+    document.getElementById('services-panel').style.display = s === 'dns-fwd' ? 'block' : 'none';
+    document.getElementById('exclusions-panel').style.display = s === 'non-ru' ? 'block' : 'none';
+    document.getElementById('fasttrack-warn').style.display = (s === 'dns-fwd' || s === 'non-ru') ? 'block' : 'none';
+    document.getElementById('non-ru-warn').style.display = s === 'non-ru' ? 'block' : 'none';
+    document.getElementById('netwatch-row').style.display = (s === 'dns-fwd' || s === 'non-ru') ? 'block' : 'none';
+    var hintEl = document.getElementById('scenario-hint');
+    var hintKey = s === 'dns-fwd' ? 'scenarioDnsHint' : s === 'non-ru' ? 'scenarioNonRuHint' : 'scenarioTunnelHint';
+    if (s === 'dns-fwd') {
+        hintEl.innerHTML = esc(t(hintKey)) + ' <span class="dns-info-icon" title="' + esc(t('dnsBrowserHint')).replace(/\n/g,'&#10;') + '">&#9432;</span>';
+    } else {
+        hintEl.textContent = t(hintKey);
+    }
+}
+
+
+function toggleAllServices(val) {
+    document.querySelectorAll('#services-grid input[name="svc"]').forEach(function(cb){ cb.checked = val; });
+}
+function addCustomDomain() {
+    var inp = document.getElementById('custom-domain-input');
+    var d = inp.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    if (!d) return;
+    var list = document.getElementById('custom-domains-list');
+    if (list.querySelector('[data-domain="' + d + '"]')) { inp.value = ''; return; }
+    var tag = document.createElement('span');
+    tag.className = 'domain-tag';
+    tag.setAttribute('data-domain', d);
+    tag.innerHTML = esc(d) + '<button onclick="this.parentNode.remove()" title="Remove">&times;</button>';
+    list.appendChild(tag);
+    inp.value = '';
+}
+function initCheckboxes() {
+    var g = document.getElementById('services-grid');
+    var h = '';
+    Object.keys(SERVICES).forEach(function(k) {
+        var s = SERVICES[k];
+        h += '<label><input type="checkbox" name="svc" value="' + k + '"' + (s.on ? ' checked' : '') + '> ' + esc(s.list) + '</label>';
+    });
+    g.innerHTML = h;
+    var eg = document.getElementById('exclusions-grid');
+    h = '';
+    Object.keys(EXCLUSIONS).forEach(function(k) {
+        var s = EXCLUSIONS[k];
+        h += '<label><input type="checkbox" name="excl" value="' + k + '"' + (s.on ? ' checked' : '') + '> ' + esc(s.list) + '</label>';
+    });
+    eg.innerHTML = h;
+}
+
+function toggleCollapse(id, btnId) {
+    var pre = document.getElementById(id);
+    var btn = document.getElementById(btnId);
+    if (pre.classList.contains('collapsed')) {
+        pre.classList.remove('collapsed');
+        btn.textContent = t('btnCollapse');
+    } else {
+        pre.classList.add('collapsed');
+        btn.textContent = t('btnExpand');
+    }
+}
+
+function copyOutput(id, btnId) {
+    var el = document.getElementById(id);
+    var text = el.textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        var btn = document.getElementById(btnId);
+        var orig = btn.textContent;
+        btn.textContent = t('copied');
+        setTimeout(function(){ btn.textContent = orig; }, 1500);
+    });
+}
+function clearAll() {
+    document.getElementById('vless-input').value = '';
+    ['parsed-section','output-section','routing-section','uninstall-section'].forEach(function(id){
+        document.getElementById(id).style.display = 'none';
+    });
+    document.getElementById('errors-container').innerHTML = '';
+}
+
+// ================================================================
+// Rendering helpers
+// ================================================================
+function renderHTML(lines) {
+    return lines.map(function(l) {
+        if (l.startsWith('#')) return '<span class="comment">' + esc(l) + '</span>';
+        return '<span class="cmd">' + esc(l) + '</span>';
+    }).join('\n');
+}
+
+function setOutput(id, lines) {
+    var pre = document.getElementById(id);
+    pre.innerHTML = renderHTML(lines);
+    var btnId = id === 'output' ? 'expand-output' : id === 'routing-output' ? 'expand-routing' : 'expand-uninstall';
+    var btn = document.getElementById(btnId);
+    if (pre.scrollHeight > pre.clientHeight + 40 || lines.length > 20) {
+        pre.classList.add('collapsed');
+        btn.style.display = 'block';
+        btn.textContent = t('btnExpand');
+    } else {
+        pre.classList.remove('collapsed');
+        btn.style.display = 'none';
+    }
+}
+
+// ================================================================
+// Storage block builder
+// ================================================================
+function buildStorageBlock(storage, prefix) {
+    if (storage === '__auto') {
+        return [
+            '# Автоопределение хранилища',
+            ':global xrayDisk "disk1"',
+            ':global xrayRootDir ("disk1/' + prefix + '")',
+            '{',
+            '  :local usbFree 0',
+            '  :do { :set usbFree [/disk/get [find where mount-point="usb1"] free] } on-error={}',
+            '  :if ($usbFree > 0) do={',
+            '    :set xrayDisk "usb1"',
+            '    :set xrayRootDir ("usb1/' + prefix + '")',
+            '  }',
+            '}'
+        ];
+    }
+    return [];
+}
+
+function getContainerRootDir(storage, prefix) {
+    if (storage === '__auto') return '$xrayRootDir';
+    return storage + '/' + prefix;
+}
+
+// ================================================================
+// DoH block builder (shared for dns-fwd and non-ru)
+// ================================================================
+function buildDohBlock(prefix, fwdInfo) {
+    var lines = [];
+    if (fwdInfo.isDoH) {
+        lines.push(':do { /ip/dns/forwarders/add doh-servers=' + fwdInfo.doh + ' name=' + fwdInfo.name + ' comment=' + prefix + '-dns } on-error={}');
+        getDnsStaticsFor(fwdInfo.name).forEach(function(s) {
+            lines.push(':do { /ip/dns/static/add address=' + s.addr + ' comment="' + prefix + '-dns" name=' + s.name + ' type=A } on-error={}');
+        });
+    } else {
+        lines.push(':do { /ip/dns/static/add address=' + fwdInfo.addr + ' comment="' + prefix + '-dns" name=' + fwdInfo.name + ' type=A } on-error={}');
+    }
+    return lines;
+}
+
+// ================================================================
+// FWD entries builder
+// ================================================================
+function buildFwdEntries(prefix, keys, dict, fwdName) {
+    var lines = [];
+    keys.forEach(function(k) {
+        var svc = dict[k];
+        if (!svc) return;
+        var domStrs = svc.d.map(function(d){ return '"' + d + '"'; });
+        lines.push(':foreach d in={' + domStrs.join(';') + '} do={');
+        lines.push('  :do { /ip/dns/static/add address-list=' + prefix + ' forward-to=' + fwdName + ' match-subdomain=yes type=FWD name=$d comment=' + prefix + '-dns } on-error={}');
+        lines.push('}');
+    });
+    return lines;
+}
+
+// ================================================================
+// Netwatch builder
+// ================================================================
+function buildNetwatch(prefix, routingTable, containerIp) {
+    return [
+        '# Netwatch — мониторинг доступности контейнера',
+        '/ip/route/set [find routing-table=' + routingTable + ' dst-address=0.0.0.0/0] distance=1',
+        '/tool/netwatch/add host=1.1.1.1 interval=10s timeout=2s up-script={',
+        '  /ip/route/set [find routing-table=' + routingTable + ' dst-address=0.0.0.0/0] distance=1',
+        '} down-script={',
+        '  /ip/route/set [find routing-table=' + routingTable + ' dst-address=0.0.0.0/0] distance=254',
+        '} comment=' + prefix + '-netwatch'
+    ];
+}
+
+// ================================================================
+// FastTrack modifier (dns-fwd mode)
+// ================================================================
+function buildFastTrackModify(prefix) {
+    return [
+        '# Ограничение FastTrack только WAN (иначе policy routing не работает)',
+        ':foreach rule in=[/ip/firewall/filter/find where action=fasttrack-connection] do={',
+        '  :local curOut [/ip/firewall/filter/get $rule out-interface-list]',
+        '  :if ($curOut = "") do={',
+        '    :local origComment [/ip/firewall/filter/get $rule comment]',
+        '    /ip/firewall/filter/set $rule out-interface-list=WAN disabled=no comment=("ft-modified-by-' + prefix + '|" . $origComment)',
+        '  }',
+        '}'
+    ];
+}
+
+// ================================================================
+// FastTrack disable (non-ru mode)
+// ================================================================
+function buildFastTrackDisable(prefix) {
+    return [
+        '# Отключение FastTrack (несовместимо с policy routing для всего трафика)',
+        ':foreach rule in=[/ip/firewall/filter/find where action=fasttrack-connection] do={',
+        '  :local origComment [/ip/firewall/filter/get $rule comment]',
+        '  :if ([:find $origComment "disabled-by-"] < 0) do={',
+        '    /ip/firewall/filter/set $rule disabled=yes comment=("disabled-by-' + prefix + '|" . $origComment)',
+        '  }',
+        '}'
+    ];
+}
+
+// ================================================================
+// Step 1: container install
+// ================================================================
+function buildStep1(cfg) {
+    var p = cfg.prefix, rip = cfg.routerIp, cip = cfg.containerIp;
+    var rt = 'r-' + p;
+    var lines = [];
+
+    lines.push('# ================================================================');
+    lines.push('# ШАГ 1: Установка контейнера Xray VLESS Reality');
+    lines.push('# ================================================================');
+    lines.push('');
+    lines.push('# --- Таблица маршрутизации ---');
+    lines.push('/routing table add disabled=no fib name=' + rt);
+    lines.push('');
+    lines.push('# --- RFC1918: защита локального доступа ---');
+    lines.push('/ip firewall address-list');
+    lines.push('add address=10.0.0.0/8 list=RFC1918');
+    lines.push('add address=172.16.0.0/12 list=RFC1918');
+    lines.push('add address=192.168.0.0/16 list=RFC1918');
+    lines.push('');
+    lines.push('/ip firewall mangle');
+    lines.push('add action=accept chain=prerouting dst-address-list=RFC1918 in-interface-list=!WAN comment=' + p);
+    lines.push('');
+    lines.push('# --- RAM диск для временных файлов контейнера ---');
+    lines.push('/disk add slot=ramstorage tmpfs-max-size=100M type=tmpfs');
+    lines.push('');
+    lines.push('# --- Настройка Docker registry ---');
+    lines.push('/container config set tmpdir=ramstorage');
+    lines.push('/container/config/set registry-url=https://registry-1.docker.io tmpdir=/ramstorage');
+    lines.push('');
+    lines.push('# --- veth интерфейс для контейнера ---');
+    lines.push('/interface veth add address=' + cip + '/30 gateway=' + rip + ' gateway6="" name=' + p + '-veth');
+    lines.push('');
+    lines.push('# --- MSS коррекция для трафика через контейнер ---');
+    lines.push('/ip firewall mangle add action=change-mss chain=forward new-mss=1360 out-interface=' + p + '-veth passthrough=yes protocol=tcp tcp-flags=syn tcp-mss=1420-65535 comment=' + p);
+    lines.push('');
+    lines.push('# --- IP адрес на veth интерфейсе роутера ---');
+    lines.push('/ip address add interface=' + p + '-veth address=' + rip + '/30');
+    lines.push('');
+    lines.push('# --- Маршрут по умолчанию в VPN таблице → контейнер ---');
+    lines.push('/ip route add distance=1 dst-address=0.0.0.0/0 gateway=' + cip + ' routing-table=' + rt);
+    lines.push('');
+    lines.push('# --- NAT masquerade для трафика через контейнер ---');
+    lines.push('/ip firewall nat add action=masquerade chain=srcnat out-interface=' + p + '-veth comment=' + p);
+    lines.push('');
+    lines.push('# --- Переменные окружения контейнера ---');
+    lines.push('/container envs add key=SERVER_ADDRESS list=' + p + '-env value="' + cfg.serverAddress + '"');
+    lines.push('/container envs add key=SERVER_PORT list=' + p + '-env value=' + cfg.serverPort);
+    lines.push('/container envs add key=USER_ID list=' + p + '-env value="' + cfg.id + '"');
+    lines.push('/container envs add key=ENCRYPTION list=' + p + '-env value="' + cfg.encryption + '"');
+    lines.push('/container envs add key=FINGERPRINT_FP list=' + p + '-env value="' + cfg.fp + '"');
+    lines.push('/container envs add key=SERVER_NAME_SNI list=' + p + '-env value="' + cfg.sni + '"');
+    lines.push('/container envs add key=PUBLIC_KEY_PBK list=' + p + '-env value="' + cfg.pbk + '"');
+    lines.push('/container envs add key=SHORT_ID_SID list=' + p + '-env value="' + cfg.sid + '"');
+    lines.push('/container envs add key=SPIDER_X list=' + p + '-env value="' + (cfg.spx || '/') + '"');
+    if (cfg.transport === 'xhttp') {
+        lines.push('/container envs add key=XHTTP_PATH list=' + p + '-env value="' + cfg.xhttpPath + '"');
+        lines.push('/container envs add key=XHTTP_HOST list=' + p + '-env value="' + cfg.xhttpHost + '"');
+        lines.push('/container envs add key=XHTTP_MODE list=' + p + '-env value="' + cfg.xhttpMode + '"');
+    }
+    lines.push('');
+
+    var storageLines = buildStorageBlock(cfg.storage, p);
+    if (storageLines.length > 0) {
+        lines = lines.concat(storageLines);
+        lines.push('');
+    }
+    lines.push('# --- Создание контейнера ---');
+    lines.push('/container add hostname=' + p + ' interface=' + p + '-veth envlist=' + p + '-env root-dir=' + getContainerRootDir(cfg.storage, p) + ' logging=yes start-on-boot=yes remote-image=catesin/xray-mikrotik-' + cfg.arch + ':latest');
+
+    lines.push('');
+    lines.push('# --- Разрешить DNS запросы из контейнера ---');
+    lines.push('/ip firewall filter');
+    lines.push('add chain=input src-address=' + cip + ' dst-address=' + rip + ' protocol=udp dst-port=53 action=accept place-before=0 comment="' + p + ': DNS UDP"');
+    lines.push('add chain=input src-address=' + cip + ' dst-address=' + rip + ' protocol=tcp dst-port=53 action=accept place-before=0 comment="' + p + ': DNS TCP"');
+    lines.push('');
+    lines.push('# Запустите контейнер через WinBox: меню Container → Start');
+
+    return lines;
+}
+
+// ================================================================
+// Step 2: routing
+// ================================================================
+function buildStep2DnsFwd(cfg, selectedServices, customDomains, fwdInfo) {
+    var p = cfg.prefix, rt = 'r-' + p;
+    var lines = [];
+
+    lines.push('# ================================================================');
+    lines.push('# ШАГ 2: Настройка DNS-маршрутизации сервисов');
+    lines.push('# ================================================================');
+    lines.push('{');
+    lines.push('# --- DoH-форвардер и DNS static ---');
+    lines = lines.concat(buildDohBlock(p, fwdInfo));
+    lines.push('');
+    lines.push('# --- FWD записи для доменов сервисов ---');
+    lines = lines.concat(buildFwdEntries(p, selectedServices, SERVICES, fwdInfo.name));
+    if (customDomains.length > 0) {
+        lines.push('# --- Свои домены ---');
+        var domStrs = customDomains.map(function(d){ return '"' + d + '"'; });
+        lines.push(':foreach d in={' + domStrs.join(';') + '} do={');
+        lines.push('  :do { /ip/dns/static/add address-list=' + p + ' forward-to=' + fwdInfo.name + ' match-subdomain=yes type=FWD name=$d comment=' + p + '-dns } on-error={}');
+        lines.push('}');
+    }
+    lines.push('');
+    lines.push('# --- Policy routing: mangle метки ---');
+    lines.push('/ip/firewall/mangle/add chain=prerouting action=mark-connection new-connection-mark=' + p + '-conn dst-address-list=' + p + ' in-interface-list=!WAN passthrough=yes comment=' + p + '-routing');
+    lines.push('/ip/firewall/mangle/add chain=prerouting action=mark-routing new-routing-mark=r-' + p + ' connection-mark=' + p + '-conn in-interface-list=LAN passthrough=no comment=' + p + '-routing');
+    lines.push('');
+    lines = lines.concat(buildFastTrackModify(p));
+    if (document.getElementById('netwatch-enable').checked) {
+        lines.push('');
+        lines = lines.concat(buildNetwatch(p, rt, cfg.containerIp));
+    }
+    lines.push('}');
+    return lines;
+}
+
+function buildStep2Tunnel(cfg) {
+    var p = cfg.prefix, rt = 'r-' + p;
+    var lines = [];
+    lines.push('# ================================================================');
+    lines.push('# ШАГ 2: Только туннель — ручная маршрутизация');
+    lines.push('# ================================================================');
+    lines.push('');
+    lines.push('# Добавьте нужные IP/подсети в адресный список ' + p + '-dst');
+    lines.push('# Пример:');
+    lines.push('# /ip firewall address-list add address=142.250.0.0/15 list=' + p + '-dst comment="Google"');
+    lines.push('# /ip firewall address-list add address=192.0.2.1 list=' + p + '-dst comment="My service"');
+    lines.push('');
+    lines.push('# --- Mangle правила для address-list ---');
+    lines.push('/ip firewall mangle');
+    lines.push('add action=mark-connection chain=prerouting connection-mark=no-mark dst-address-list=' + p + '-dst in-interface-list=!WAN new-connection-mark=' + p + '-conn passthrough=yes comment=' + p + '-routing');
+    lines.push('add action=mark-routing chain=prerouting connection-mark=' + p + '-conn in-interface-list=LAN new-routing-mark=' + rt + ' passthrough=no comment=' + p + '-routing');
+    return lines;
+}
+
+function buildStep2NonRu(cfg, exclusionKeys, fwdInfo) {
+    var p = cfg.prefix, rt = 'r-' + p;
+    var lines = [];
+    lines.push('# ================================================================');
+    lines.push('# ШАГ 2: Маршрутизация всего не-RU трафика через туннель');
+    lines.push('# ================================================================');
+    lines.push('{');
+    lines.push('# --- DoH форвардер (для разрешения доменов) ---');
+    lines = lines.concat(buildDohBlock(p, fwdInfo));
+    if (exclusionKeys.length > 0) {
+        lines.push('');
+        lines.push('# --- FWD записи для исключений ---');
+        lines = lines.concat(buildFwdEntries(p, exclusionKeys, EXCLUSIONS, fwdInfo.name));
+    }
+    lines.push('');
+    lines.push('# --- Добавить RFC1918 и спецдиапазоны в список RU (не пускать через VPN) ---');
+    lines.push(':foreach net in={"10.0.0.0/8";"172.16.0.0/12";"192.168.0.0/16";"100.64.0.0/10";"169.254.0.0/16";"224.0.0.0/4"} do={');
+    lines.push('  :if ([:len [/ip/firewall/address-list/find where list=RU address=$net comment=' + p + '-private]] = 0) do={');
+    lines.push('    /ip/firewall/address-list/add list=RU address=$net comment=' + p + '-private');
+    lines.push('  }');
+    lines.push('}');
+    lines.push('');
+    lines.push('# --- Сохранить IP сервера Xray (прямое соединение) ---');
+    lines.push(':do { /ip/firewall/address-list/add address=' + cfg.serverAddress + ' list=' + p + '-vpn-server comment=' + p + '-non-ru } on-error={}');
+    lines.push('/ip/firewall/mangle/add chain=prerouting action=accept dst-address-list=' + p + '-vpn-server in-interface-list=!WAN comment=' + p + '-non-ru');
+    lines.push('');
+    if (exclusionKeys.length > 0) {
+        lines.push('# --- Исключения: прямое соединение ---');
+        exclusionKeys.forEach(function(k) {
+            var ex = EXCLUSIONS[k];
+            if (ex) lines.push('/ip/firewall/mangle/add chain=prerouting action=accept dst-address-list=' + p + '-' + ex.list + ' in-interface-list=!WAN comment=' + p + '-non-ru');
+        });
+        lines.push('');
+    }
+    lines.push('# --- Отправить весь не-RU трафик через туннель ---');
+    lines.push('/ip/firewall/mangle/add chain=prerouting action=mark-routing new-routing-mark=' + rt + ' dst-address-list=!RU in-interface-list=LAN passthrough=no comment=' + p + '-non-ru');
+    lines.push('');
+    lines = lines.concat(buildFastTrackDisable(p));
+    lines.push('}');
+    lines.push('');
+    lines.push('# --- Загрузка списка RU-диапазонов (требует интернет) ---');
+    lines.push(':do { /tool/fetch url="' + RU_RANGES_URL + '" dst-path=ru_ranges.rsc mode=https http-header-field="User-Agent: MikroTik" http-max-redirect-count=10; :delay 2s; /import file=ru_ranges.rsc; /file remove ru_ranges.rsc; :log info "RU address list imported" } on-error={ :log error "RU list: download/import failed" }');
+    lines.push('');
+    lines.push('# --- Автообновление RU-списка (ежедневно в 4:00) ---');
+    lines.push('/system/scheduler/add name=' + p + '-ru-update interval=1d start-time=04:00:00 on-event=("/tool/fetch url=\\"' + RU_RANGES_URL + '\\" dst-path=ru_ranges.rsc mode=https http-header-field=\\"User-Agent: MikroTik\\" http-max-redirect-count=10; :delay 2s; /import file=ru_ranges.rsc; /file remove ru_ranges.rsc") comment=' + p + '-non-ru');
+    if (document.getElementById('netwatch-enable').checked) {
+        lines.push('');
+        lines = lines.concat(buildNetwatch(p, rt, cfg.containerIp));
+    }
+    return lines;
+}
+
+// ================================================================
+// Uninstall
+// ================================================================
+function buildUninstall(cfg) {
+    var p = cfg.prefix, rt = 'r-' + p;
+    var lines = [];
+    lines.push('# ================================================================');
+    lines.push('# Удаление: ' + p);
+    lines.push('# ================================================================');
+    lines.push('');
+    lines.push('# --- Остановить и удалить контейнер ---');
+    lines.push(':do { /container stop [find hostname="' + p + '"] } on-error={}');
+    lines.push(':delay 3s');
+    lines.push(':do { /container remove [find hostname="' + p + '"] } on-error={}');
+    lines.push(':delay 1s');
+    lines.push('');
+    lines.push('# --- Переменные окружения ---');
+    lines.push('/container envs remove [find list="' + p + '-env"]');
+    lines.push('');
+    lines.push('# --- Mangle, NAT, Filter правила ---');
+    lines.push('/ip firewall mangle remove [find comment~"^' + p + '"]');
+    lines.push('/ip firewall nat remove [find comment~"^' + p + '"]');
+    lines.push('/ip firewall filter remove [find comment~"^' + p + '"]');
+    lines.push('');
+    lines.push('# --- Восстановить FastTrack ---');
+    lines.push(':foreach rule in=[/ip/firewall/filter/find where comment~"ft-modified-by-' + p + '"] do={');
+    lines.push('  :local c [/ip/firewall/filter/get $rule comment]');
+    lines.push('  :local orig [:pick $c ([:find $c "|"] + 1) [:len $c]]');
+    lines.push('  /ip/firewall/filter/set $rule out-interface-list="" comment=$orig');
+    lines.push('}');
+    lines.push(':foreach rule in=[/ip/firewall/filter/find where comment~"disabled-by-' + p + '"] do={');
+    lines.push('  :local c [/ip/firewall/filter/get $rule comment]');
+    lines.push('  :local orig [:pick $c ([:find $c "|"] + 1) [:len $c]]');
+    lines.push('  /ip/firewall/filter/set $rule disabled=no comment=$orig');
+    lines.push('}');
+    lines.push('');
+    lines.push('# --- IP адрес, маршруты, veth ---');
+    lines.push('/ip address remove [find interface="' + p + '-veth"]');
+    lines.push('/ip route remove [find routing-table="' + rt + '"]');
+    lines.push('/interface veth remove [find name="' + p + '-veth"]');
+    lines.push('');
+    lines.push('# --- Таблица маршрутизации ---');
+    lines.push(':do { /routing table remove [find name="' + rt + '"] } on-error={}');
+    lines.push('');
+    lines.push('# --- DNS записи и форвардеры ---');
+    lines.push('/ip dns static remove [find comment~"^' + p + '-dns"]');
+    lines.push(':do { /ip dns forwarders remove [find comment~"^' + p + '-dns"] } on-error={}');
+    lines.push('');
+    lines.push('# --- Scheduler ---');
+    lines.push(':do { /system scheduler remove [find comment~"^' + p + '"] } on-error={}');
+    lines.push('');
+    lines.push('# --- Netwatch ---');
+    lines.push(':do { /tool netwatch remove [find comment~"^' + p + '"] } on-error={}');
+    lines.push('');
+    lines.push('# --- Address lists ---');
+    lines.push('/ip firewall address-list remove [find list="' + p + '"]');
+    lines.push('/ip firewall address-list remove [find list="' + p + '-dst"]');
+    lines.push('/ip firewall address-list remove [find list="' + p + '-vpn-server"]');
+    lines.push('/ip firewall address-list remove [find comment="' + p + '-private"]');
+    lines.push('');
+    lines.push('# Примечание: address-list RFC1918 не удаляется — используется другими правилами');
+    return lines;
+}
+
+// ================================================================
+// Validation & generate
+// ================================================================
+function showErrors(errors) {
+    var c = document.getElementById('errors-container');
+    if (!errors.length) { c.innerHTML = ''; return; }
+    var h = '<div class="alert alert-error"><strong>' + esc(t('errTitle')) + '</strong><ul style="margin-top:6px;padding-left:18px">';
+    errors.forEach(function(e){ h += '<li>' + esc(e) + '</li>'; });
+    h += '</ul></div>';
+    c.innerHTML = h;
+}
+
+function showParsed(parsed) {
+    var fields = [
+        {k:'id',          label:'USER_ID'},
+        {k:'host',        label:'SERVER_ADDRESS'},
+        {k:'port',        label:'SERVER_PORT'},
+        {k:'encryption',  label:'ENCRYPTION'},
+        {k:'fp',          label:'FINGERPRINT_FP'},
+        {k:'sni',         label:'SERVER_NAME_SNI'},
+        {k:'pbk',         label:'PUBLIC_KEY_PBK'},
+        {k:'sid',         label:'SHORT_ID_SID'},
+        {k:'spx',         label:'SPIDER_X'},
+        {k:'transport',   label:'transport'}
+    ];
+    if (parsed.transport === 'xhttp') {
+        fields.push({k:'xhttpPath', label:'XHTTP_PATH'});
+        fields.push({k:'xhttpHost', label:'XHTTP_HOST', optional:true});
+        fields.push({k:'xhttpMode', label:'XHTTP_MODE'});
+    }
+    var html = '<div class="fields-grid">';
+    fields.forEach(function(f) {
+        var val = parsed[f.k] || '';
+        var ok = val !== '' || f.optional;
+        var cl = ok ? 'ok' : 'miss';
+        var display = val.length > 20 ? val.slice(0,18) + '…' : (val || '—');
+        html += '<div class="field-tag ' + cl + '"><span class="fname">' + esc(f.label) + '</span><span class="fval">' + esc(display) + '</span></div>';
+    });
+    html += '</div>';
+    document.getElementById('fields-display').innerHTML = html;
+    document.getElementById('parsed-section').style.display = 'block';
+}
+
+function generate() {
+    var errors = [];
+    var raw = document.getElementById('vless-input').value.trim();
+    if (!raw) { errors.push(t('errEmpty')); showErrors(errors); return; }
+    var parsed = parseVlessURL(raw);
+    if (!parsed) { errors.push(t('errInvalid')); showErrors(errors); return; }
+
+    var missingFields = ['id','host','port','pbk','fp','sni','sid'].filter(function(k) { return !parsed[k]; });
+    if (missingFields.length) { errors.push(t('errMissingFields') + missingFields.map(function(k){return k.toUpperCase();}).join(', ')); showErrors(errors); return; }
+
+    var prefix = getPrefix();
+
+    var routerIp = document.getElementById('router-ip').value.trim();
+    var containerIp = document.getElementById('container-ip').value.trim();
+
+    var scenario = getScenario();
+    var selectedServices = getSelectedServices();
+    var customDomains = getCustomDomains();
+    if (scenario === 'dns-fwd' && selectedServices.length === 0 && customDomains.length === 0) {
+        errors.push(t('errNoService'));
+    }
+
+    if (errors.length) { showErrors(errors); return; }
+    showErrors([]);
+
+    showParsed(parsed);
+
+    var cfg = {
+        prefix:        prefix,
+        routerIp:      routerIp,
+        containerIp:   containerIp,
+        storage:       getStorage(),
+        arch:          getArch(),
+        serverAddress: parsed.host,
+        serverPort:    parsed.port,
+        id:            parsed.id,
+        encryption:    parsed.encryption,
+        transport:     parsed.transport,
+        fp:            parsed.fp,
+        sni:           parsed.sni,
+        pbk:           parsed.pbk,
+        sid:           parsed.sid,
+        spx:           parsed.spx,
+        xhttpPath:     parsed.xhttpPath,
+        xhttpHost:     parsed.xhttpHost,
+        xhttpMode:     parsed.xhttpMode
+    };
+
+    var step1 = buildStep1(cfg);
+    setOutput('output', step1);
+    document.getElementById('output-section').style.display = 'block';
+
+    var fwdInfo = getDohInfo(getDohForwarder());
+    var step2;
+    if (scenario === 'dns-fwd') {
+        step2 = buildStep2DnsFwd(cfg, selectedServices, customDomains, fwdInfo);
+    } else if (scenario === 'tunnel') {
+        step2 = buildStep2Tunnel(cfg);
+    } else {
+        step2 = buildStep2NonRu(cfg, getSelectedExclusions(), fwdInfo);
+    }
+    setOutput('routing-output', step2);
+    document.getElementById('routing-section').style.display = 'block';
+
+    var uninstall = buildUninstall(cfg);
+    setOutput('uninstall-output', uninstall);
+    document.getElementById('uninstall-section').style.display = 'block';
+
+    document.getElementById('parsed-section').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ================================================================
+// Init
+// ================================================================
+(function() {
+    initCheckboxes();
+    onScenarioChange();
+    setLang('ru');
+    document.getElementById('doh-selector').addEventListener('change', function(e) {
+        document.getElementById('doh-custom-url').style.display = e.target.value === '__custom' ? 'block' : 'none';
+    });
+})();
+</script>
+</body>
+</html>
