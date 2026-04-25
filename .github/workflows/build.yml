@@ -10,6 +10,9 @@ on:
     # Каждый понедельник в 04:00 UTC — подхватить новые релизы Xray/tun2socks
     - cron: '0 4 * * 1'
 
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/xray-mikrotik
+
 jobs:
   get-versions:
     runs-on: ubuntu-latest
@@ -44,6 +47,8 @@ jobs:
   build:
     needs: get-versions
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,11 +59,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Docker Hub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -70,8 +76,8 @@ jobs:
             XRAY_VERSION=${{ needs.get-versions.outputs.xray_version }}
             TUN2SOCKS_VERSION=${{ needs.get-versions.outputs.tun2socks_version }}
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/xray-mikrotik:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/xray-mikrotik:${{ needs.get-versions.outputs.xray_version }}
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ needs.get-versions.outputs.xray_version }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             xray.version=${{ needs.get-versions.outputs.xray_version }}
