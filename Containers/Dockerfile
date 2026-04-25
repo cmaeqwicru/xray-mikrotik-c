@@ -6,7 +6,7 @@ ARG TARGETVARIANT
 ARG XRAY_VERSION
 ARG TUN2SOCKS_VERSION
 
-RUN apk add --no-cache curl unzip
+RUN apk add --no-cache curl unzip jq
 
 # Xray-core
 RUN set -ex; \
@@ -22,16 +22,20 @@ RUN set -ex; \
     unzip /tmp/xray.zip xray -d /opt/xray/; \
     chmod +x /opt/xray/xray
 
-# tun2socks
+# tun2socks: ищем asset через API — имя файла менялось между версиями (arm7/armv7)
 RUN set -ex; \
     case "${TARGETARCH}${TARGETVARIANT}" in \
-      amd64)  FILE="tun2socks-linux-amd64.zip" ;; \
-      arm64)  FILE="tun2socks-linux-arm64.zip" ;; \
-      armv7)  FILE="tun2socks-linux-arm7.zip" ;; \
-      *)      echo "Unsupported arch+variant: ${TARGETARCH}${TARGETVARIANT}"; exit 1 ;; \
+      amd64)  GREP_PAT="linux-amd64\\.zip" ;; \
+      arm64)  GREP_PAT="linux-arm64\\.zip" ;; \
+      armv7)  GREP_PAT="linux-arm[^6]" ;; \
+      *)      echo "Unsupported: ${TARGETARCH}${TARGETVARIANT}"; exit 1 ;; \
     esac; \
-    curl -fL "https://github.com/xjasonlyu/tun2socks/releases/download/${TUN2SOCKS_VERSION}/${FILE}" \
-         -o /tmp/tun2socks.zip; \
+    URL=$(curl -fsSL \
+      "https://api.github.com/repos/xjasonlyu/tun2socks/releases/tags/${TUN2SOCKS_VERSION}" \
+      | jq -r '.assets[].browser_download_url' \
+      | grep -E "${GREP_PAT}" | head -1); \
+    echo "tun2socks: ${URL}"; \
+    curl -fL "${URL}" -o /tmp/tun2socks.zip; \
     mkdir -p /opt/tun2socks; \
     unzip /tmp/tun2socks.zip -d /tmp/t2s/; \
     find /tmp/t2s/ -type f -name 'tun2socks*' -exec mv {} /opt/tun2socks/tun2socks \;; \
