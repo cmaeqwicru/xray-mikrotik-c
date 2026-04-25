@@ -89,7 +89,6 @@ echo "Starting tun2socks"
   -tcp-sndbuf 3m \
   -tcp-rcvbuf 3m \
   -device tun0 \
-  -proxy socks5://127.0.0.1:10800 \
-  -interface eth0 &
+  -proxy socks5://127.0.0.1:10800 &
 
 echo "Container is ready"
