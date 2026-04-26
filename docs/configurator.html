@@ -1231,20 +1231,6 @@ function buildCombinedScript(cfg, selectedServices, customDomains, fwdInfo, scen
     buildStep1(cfg).forEach(function(l) { lines.push(l); });
     lines.push('');
 
-    // Ожидание загрузки образа
-    lines.push('# --- Ожидание загрузки образа ---');
-    lines.push(':local cid [/container find hostname="' + p + '"]');
-    lines.push(':while ([/container get $cid status] != "stopped") do={ :delay 5s }');
-    lines.push('');
-
-    // Запуск контейнера
-    lines.push('/container start $cid');
-    lines.push('');
-
-    // Ожидание запуска
-    lines.push(':while ([/container get $cid status] != "running") do={ :delay 3s }');
-    lines.push('');
-
     // Настройка маршрутизации
     var step2;
     if (scenario === 'dns-fwd') {
