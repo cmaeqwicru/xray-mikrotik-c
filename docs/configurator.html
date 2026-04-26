@@ -1217,14 +1217,11 @@ function buildUninstallBody(cfg) {
 
 function buildCombinedScript(cfg, selectedServices, customDomains, fwdInfo, scenario) {
     var p = cfg.prefix;
-    var installName = p + '-install';
-    var removeName  = p + '-remove';
+    var removeName = p + '-remove';
     var lines = [];
 
-    lines.push('/system/script/add name="' + installName + '" source={');
-    lines.push('');
-
     // Сохранить скрипт удаления
+    lines.push(':do { /system/script/remove [find name="' + removeName + '"] } on-error={}');
     lines.push('/system/script/add name="' + removeName + '" source={');
     buildUninstallBody(cfg).forEach(function(l) { lines.push(l); });
     lines.push('}');
@@ -1259,9 +1256,6 @@ function buildCombinedScript(cfg, selectedServices, customDomains, fwdInfo, scen
     }
     step2.forEach(function(l) { lines.push(l); });
 
-    lines.push('');
-    lines.push('}');
-    lines.push('/system/script/run ' + installName);
     return lines;
 }
 
