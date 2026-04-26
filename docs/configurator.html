@@ -705,7 +705,8 @@ function parseVlessURL(raw) {
         spx:         params.spx        || '/',
         xhttpPath:   decodeURIComponent(params.path || '/'),
         xhttpHost:   params.host       || '',
-        xhttpMode:   params.mode       || 'auto'
+        xhttpMode:   params.mode       || 'auto',
+        pqv:         params.pqv        || ''
     };
 }
 
@@ -1039,6 +1040,9 @@ function buildStep1(cfg) {
         lines.push('/container envs add key=XHTTP_HOST list=' + p + '-env value="' + cfg.xhttpHost + '"');
         lines.push('/container envs add key=XHTTP_MODE list=' + p + '-env value="' + cfg.xhttpMode + '"');
     }
+    if (cfg.pqv) {
+        lines.push('/container envs add key=PQV list=' + p + '-env value="' + cfg.pqv + '"');
+    }
     lines.push('');
 
     var storageLines = buildStorageBlock(cfg.storage, p);
@@ -1275,6 +1279,9 @@ function showParsed(parsed) {
         fields.push({k:'xhttpHost', label:'XHTTP_HOST', optional:true});
         fields.push({k:'xhttpMode', label:'XHTTP_MODE'});
     }
+    if (parsed.pqv) {
+        fields.push({k:'pqv', label:'PQV', optional:true});
+    }
     var html = '<div class="fields-grid">';
     fields.forEach(function(f) {
         var val = parsed[f.k] || '';
@@ -1332,7 +1339,8 @@ function generate() {
         spx:           parsed.spx,
         xhttpPath:     parsed.xhttpPath,
         xhttpHost:     parsed.xhttpHost,
-        xhttpMode:     parsed.xhttpMode
+        xhttpMode:     parsed.xhttpMode,
+        pqv:           parsed.pqv
     };
 
     var fwdInfo = getDohInfo(getDohForwarder());

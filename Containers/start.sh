@@ -20,6 +20,11 @@ ip route add $SERVER_IP_ADDRESS/32 via 172.18.20.5
 rm -f /etc/resolv.conf
 tee /etc/resolv.conf <<< "nameserver 172.18.20.5"
 
+PQV_JSON=""
+if [ -n "$PQV" ]; then
+  PQV_JSON=",\"postQuantumKey\": \"$PQV\""
+fi
+
 cat <<EOF > /opt/xray/config/config.json
 {
   "log": {
@@ -66,7 +71,7 @@ cat <<EOF > /opt/xray/config/config.json
           "serverName": "$SERVER_NAME_SNI",
           "publicKey": "$PUBLIC_KEY_PBK",
           "spiderX": "$SPIDER_X",
-          "shortId": "$SHORT_ID_SID"
+          "shortId": "$SHORT_ID_SID"${PQV_JSON}
         },
         "xhttpSettings": {
           "path": "$XHTTP_PATH",
