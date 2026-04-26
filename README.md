@@ -26,6 +26,24 @@
 - **Не-RU трафик** — весь нероссийский трафик через VPN
 - **Только туннель** — ручная настройка адресного листа
 
+## Добавление домена (DNS FWD)
+
+Чтобы добавить домен в маршрутизацию после установки, выполните на роутере:
+
+```
+/ip dns static add name=example.com type=FWD forward-to=GoogleDNS match-subdomain=yes address-list=xray-vless comment=xray-vless-dns
+```
+
+- `name` — домен (без `www`, с `match-subdomain=yes` покрывает все поддомены)
+- `forward-to` — имя DoH-форвардера, созданного скриптом (`GoogleDNS`, `CloudFlare` и т.д.)
+- `address-list` — имя адресного листа (совпадает с префиксом установки, по умолчанию `xray-vless`)
+
+После добавления сбросьте кэш DNS и откройте сайт с устройства:
+
+```
+/ip dns cache flush
+```
+
 ## Требования
 
 - RouterOS 7.22+ с поддержкой контейнеров
