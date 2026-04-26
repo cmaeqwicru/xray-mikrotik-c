@@ -462,30 +462,16 @@
 
     <div id="output-section" class="card">
         <div class="output-header">
-            <div class="card-title" style="margin-bottom:0" data-i18n="outputTitle">Шаг 1: Установка контейнера Xray</div>
+            <div class="card-title" style="margin-bottom:0" data-i18n="outputTitle">Скрипт установки</div>
             <button class="btn btn-secondary" id="copy-btn" onclick="copyOutput('output','copy-btn')" data-i18n="btnCopy">Копировать</button>
         </div>
         <pre id="output" class="out-block"></pre>
         <button class="btn-expand" id="expand-output" onclick="toggleCollapse('output','expand-output')" style="display:none" data-i18n="btnExpand">Показать всё</button>
     </div>
 
-    <div id="routing-section" class="card">
-        <div class="output-header">
-            <div class="card-title" style="margin-bottom:0" data-i18n="routingTitle">Шаг 2: Настройка маршрутизации</div>
-            <button class="btn btn-secondary" id="copy-routing-btn" onclick="copyOutput('routing-output','copy-routing-btn')" data-i18n="btnCopyRouting">Копировать</button>
-        </div>
-        <div class="alert alert-warning" data-i18n="routingNote"></div>
-        <pre id="routing-output" class="out-block" style="margin-top:10px"></pre>
-        <button class="btn-expand" id="expand-routing" onclick="toggleCollapse('routing-output','expand-routing')" style="display:none" data-i18n="btnExpand">Показать всё</button>
-    </div>
-
     <div id="uninstall-section" class="card">
-        <div class="output-header">
-            <div class="card-title" style="margin-bottom:0" data-i18n="uninstallTitle">Команды удаления</div>
-            <button class="btn btn-secondary" id="copy-uninstall-btn" onclick="copyOutput('uninstall-output','copy-uninstall-btn')" data-i18n="btnCopyUn">Копировать</button>
-        </div>
-        <pre id="uninstall-output" class="out-block"></pre>
-        <button class="btn-expand" id="expand-uninstall" onclick="toggleCollapse('uninstall-output','expand-uninstall')" style="display:none" data-i18n="btnExpand">Показать всё</button>
+        <p style="font-size:0.875rem;font-weight:500;margin-bottom:8px" data-i18n="uninstallHint">Скрипт удаления сохранится автоматически при установке. Для удаления:</p>
+        <code id="uninstall-run-cmd" style="font-family:var(--mono);font-size:0.82rem;background:#f3f4f6;padding:6px 10px;border-radius:6px;display:block"></code>
     </div>
 
     <footer data-i18n="footer">Работает полностью офлайн — данные не покидают браузер.</footer>
@@ -537,13 +523,9 @@ var I18N = {
         btnGenerate: 'Generate commands',
         btnClear: 'Clear',
         parsedTitle: 'Parsed parameters',
-        outputTitle: 'Step 1: Install Xray Container',
+        outputTitle: 'Install Script',
         btnCopy: 'Copy',
-        routingTitle: 'Step 2: Routing Setup',
-        btnCopyRouting: 'Copy routing',
-        routingNote: 'Paste this AFTER Step 1 completes and the container starts.',
-        uninstallTitle: 'Uninstall Commands',
-        btnCopyUn: 'Copy uninstall',
+        uninstallHint: 'The removal script is saved automatically on install. To remove the tunnel:',
         footer: 'Works entirely offline — no data leaves your browser.',
         errEmpty: 'VLESS URL is empty.',
         errInvalid: 'Invalid VLESS URL. Must start with vless://',
@@ -593,13 +575,9 @@ var I18N = {
         btnGenerate: 'Сгенерировать команды',
         btnClear: 'Очистить',
         parsedTitle: 'Распознанные параметры',
-        outputTitle: 'Шаг 1: Установка контейнера Xray',
+        outputTitle: 'Скрипт установки',
         btnCopy: 'Копировать',
-        routingTitle: 'Шаг 2: Настройка маршрутизации',
-        btnCopyRouting: 'Копировать',
-        routingNote: 'Выполняйте ПОСЛЕ того, как контейнер запустится (Step 1).',
-        uninstallTitle: 'Команды удаления',
-        btnCopyUn: 'Копировать',
+        uninstallHint: 'Скрипт удаления сохранится автоматически при установке. Для удаления туннеля:',
         footer: 'Работает полностью офлайн — данные не покидают браузер.',
         errEmpty: 'VLESS URL пустой.',
         errInvalid: 'Неверный VLESS URL. Должен начинаться с vless://',
@@ -854,6 +832,7 @@ function toggleCollapse(id, btnId) {
 function copyOutput(id, btnId) {
     var el = document.getElementById(id);
     var text = el.textContent;
+    if (text && text[text.length - 1] !== '\n') text += '\n';
     navigator.clipboard.writeText(text).then(function() {
         var btn = document.getElementById(btnId);
         var orig = btn.textContent;
@@ -863,7 +842,7 @@ function copyOutput(id, btnId) {
 }
 function clearAll() {
     document.getElementById('vless-input').value = '';
-    ['parsed-section','output-section','routing-section','uninstall-section'].forEach(function(id){
+    ['parsed-section','output-section','uninstall-section'].forEach(function(id){
         document.getElementById(id).style.display = 'none';
     });
     document.getElementById('errors-container').innerHTML = '';
@@ -882,7 +861,7 @@ function renderHTML(lines) {
 function setOutput(id, lines) {
     var pre = document.getElementById(id);
     pre.innerHTML = renderHTML(lines);
-    var btnId = id === 'output' ? 'expand-output' : id === 'routing-output' ? 'expand-routing' : 'expand-uninstall';
+    var btnId = id === 'output' ? 'expand-output' : 'expand-uninstall';
     var btn = document.getElementById(btnId);
     if (pre.scrollHeight > pre.clientHeight + 40 || lines.length > 20) {
         pre.classList.add('collapsed');
@@ -1075,9 +1054,6 @@ function buildStep1(cfg) {
     lines.push('/ip firewall filter');
     lines.push('add chain=input src-address=' + cip + ' dst-address=' + rip + ' protocol=udp dst-port=53 action=accept place-before=0 comment="' + p + ': DNS UDP"');
     lines.push('add chain=input src-address=' + cip + ' dst-address=' + rip + ' protocol=tcp dst-port=53 action=accept place-before=0 comment="' + p + ': DNS TCP"');
-    lines.push('');
-    lines.push('# Запустите контейнер через WinBox: меню Container → Start');
-
     return lines;
 }
 
@@ -1192,64 +1168,100 @@ function buildStep2NonRu(cfg, exclusionKeys, fwdInfo) {
 // ================================================================
 // Uninstall
 // ================================================================
-function buildUninstall(cfg) {
+function buildUninstallBody(cfg) {
     var p = cfg.prefix, rt = 'r-' + p;
+    var scriptName = p + '-remove';
+
+    var body = [];
+    body.push(':do { /container stop [find hostname="' + p + '"] } on-error={}');
+    body.push(':delay 3s');
+    body.push(':do { /container remove [find hostname="' + p + '"] } on-error={}');
+    body.push(':delay 1s');
+    body.push('');
+    body.push('/container envs remove [find list="' + p + '-env"]');
+    body.push('');
+    body.push('/ip firewall mangle remove [find comment~"^' + p + '"]');
+    body.push('/ip firewall nat remove [find comment~"^' + p + '"]');
+    body.push('/ip firewall filter remove [find comment~"^' + p + '"]');
+    body.push('');
+    body.push(':foreach rule in=[/ip/firewall/filter/find where comment~"ft-modified-by-' + p + '"] do={');
+    body.push('  :local c [/ip/firewall/filter/get $rule comment]');
+    body.push('  :local orig [:pick $c ([:find $c "|"] + 1) [:len $c]]');
+    body.push('  /ip/firewall/filter/set $rule out-interface-list="" comment=$orig');
+    body.push('}');
+    body.push(':foreach rule in=[/ip/firewall/filter/find where comment~"disabled-by-' + p + '"] do={');
+    body.push('  :local c [/ip/firewall/filter/get $rule comment]');
+    body.push('  :local orig [:pick $c ([:find $c "|"] + 1) [:len $c]]');
+    body.push('  /ip/firewall/filter/set $rule disabled=no comment=$orig');
+    body.push('}');
+    body.push('');
+    body.push('/ip address remove [find interface="' + p + '-veth"]');
+    body.push('/ip route remove [find routing-table="' + rt + '"]');
+    body.push('/interface veth remove [find name="' + p + '-veth"]');
+    body.push(':do { /routing table remove [find name="' + rt + '"] } on-error={}');
+    body.push('');
+    body.push('/ip dns static remove [find comment~"^' + p + '-dns"]');
+    body.push(':do { /ip dns forwarders remove [find comment~"^' + p + '-dns"] } on-error={}');
+    body.push(':do { /system scheduler remove [find comment~"^' + p + '"] } on-error={}');
+    body.push(':do { /tool netwatch remove [find comment~"^' + p + '"] } on-error={}');
+    body.push('');
+    body.push('/ip firewall address-list remove [find list="' + p + '"]');
+    body.push('/ip firewall address-list remove [find list="' + p + '-dst"]');
+    body.push('/ip firewall address-list remove [find list="' + p + '-vpn-server"]');
+    body.push('/ip firewall address-list remove [find comment="' + p + '-private"]');
+    body.push('');
+    body.push('/system script remove [find name="' + scriptName + '"]');
+
+    return body;
+}
+
+function buildCombinedScript(cfg, selectedServices, customDomains, fwdInfo, scenario) {
+    var p = cfg.prefix;
+    var installName = p + '-install';
+    var removeName  = p + '-remove';
     var lines = [];
-    lines.push('# ================================================================');
-    lines.push('# Удаление: ' + p);
-    lines.push('# ================================================================');
+
+    lines.push('/system/script/add name="' + installName + '" source={');
     lines.push('');
-    lines.push('# --- Остановить и удалить контейнер ---');
-    lines.push(':do { /container stop [find hostname="' + p + '"] } on-error={}');
-    lines.push(':delay 3s');
-    lines.push(':do { /container remove [find hostname="' + p + '"] } on-error={}');
-    lines.push(':delay 1s');
-    lines.push('');
-    lines.push('# --- Переменные окружения ---');
-    lines.push('/container envs remove [find list="' + p + '-env"]');
-    lines.push('');
-    lines.push('# --- Mangle, NAT, Filter правила ---');
-    lines.push('/ip firewall mangle remove [find comment~"^' + p + '"]');
-    lines.push('/ip firewall nat remove [find comment~"^' + p + '"]');
-    lines.push('/ip firewall filter remove [find comment~"^' + p + '"]');
-    lines.push('');
-    lines.push('# --- Восстановить FastTrack ---');
-    lines.push(':foreach rule in=[/ip/firewall/filter/find where comment~"ft-modified-by-' + p + '"] do={');
-    lines.push('  :local c [/ip/firewall/filter/get $rule comment]');
-    lines.push('  :local orig [:pick $c ([:find $c "|"] + 1) [:len $c]]');
-    lines.push('  /ip/firewall/filter/set $rule out-interface-list="" comment=$orig');
-    lines.push('}');
-    lines.push(':foreach rule in=[/ip/firewall/filter/find where comment~"disabled-by-' + p + '"] do={');
-    lines.push('  :local c [/ip/firewall/filter/get $rule comment]');
-    lines.push('  :local orig [:pick $c ([:find $c "|"] + 1) [:len $c]]');
-    lines.push('  /ip/firewall/filter/set $rule disabled=no comment=$orig');
+
+    // Сохранить скрипт удаления
+    lines.push('/system/script/add name="' + removeName + '" source={');
+    buildUninstallBody(cfg).forEach(function(l) { lines.push(l); });
     lines.push('}');
     lines.push('');
-    lines.push('# --- IP адрес, маршруты, veth ---');
-    lines.push('/ip address remove [find interface="' + p + '-veth"]');
-    lines.push('/ip route remove [find routing-table="' + rt + '"]');
-    lines.push('/interface veth remove [find name="' + p + '-veth"]');
+
+    // Инфраструктура контейнера
+    buildStep1(cfg).forEach(function(l) { lines.push(l); });
     lines.push('');
-    lines.push('# --- Таблица маршрутизации ---');
-    lines.push(':do { /routing table remove [find name="' + rt + '"] } on-error={}');
+
+    // Ожидание загрузки образа
+    lines.push('# --- Ожидание загрузки образа ---');
+    lines.push(':local cid [/container find hostname="' + p + '"]');
+    lines.push(':while ([/container get $cid status] != "stopped") do={ :delay 5s }');
     lines.push('');
-    lines.push('# --- DNS записи и форвардеры ---');
-    lines.push('/ip dns static remove [find comment~"^' + p + '-dns"]');
-    lines.push(':do { /ip dns forwarders remove [find comment~"^' + p + '-dns"] } on-error={}');
+
+    // Запуск контейнера
+    lines.push('/container start $cid');
     lines.push('');
-    lines.push('# --- Scheduler ---');
-    lines.push(':do { /system scheduler remove [find comment~"^' + p + '"] } on-error={}');
+
+    // Ожидание запуска
+    lines.push(':while ([/container get $cid status] != "running") do={ :delay 3s }');
     lines.push('');
-    lines.push('# --- Netwatch ---');
-    lines.push(':do { /tool netwatch remove [find comment~"^' + p + '"] } on-error={}');
+
+    // Настройка маршрутизации
+    var step2;
+    if (scenario === 'dns-fwd') {
+        step2 = buildStep2DnsFwd(cfg, selectedServices, customDomains, fwdInfo);
+    } else if (scenario === 'tunnel') {
+        step2 = buildStep2Tunnel(cfg);
+    } else {
+        step2 = buildStep2NonRu(cfg, getSelectedExclusions(), fwdInfo);
+    }
+    step2.forEach(function(l) { lines.push(l); });
+
     lines.push('');
-    lines.push('# --- Address lists ---');
-    lines.push('/ip firewall address-list remove [find list="' + p + '"]');
-    lines.push('/ip firewall address-list remove [find list="' + p + '-dst"]');
-    lines.push('/ip firewall address-list remove [find list="' + p + '-vpn-server"]');
-    lines.push('/ip firewall address-list remove [find comment="' + p + '-private"]');
-    lines.push('');
-    lines.push('# Примечание: address-list RFC1918 не удаляется — используется другими правилами');
+    lines.push('}');
+    lines.push('/system/script/run ' + installName);
     return lines;
 }
 
@@ -1343,24 +1355,12 @@ function generate() {
         xhttpMode:     parsed.xhttpMode
     };
 
-    var step1 = buildStep1(cfg);
-    setOutput('output', step1);
+    var fwdInfo = getDohInfo(getDohForwarder());
+    var combined = buildCombinedScript(cfg, selectedServices, customDomains, fwdInfo, scenario);
+    setOutput('output', combined);
     document.getElementById('output-section').style.display = 'block';
 
-    var fwdInfo = getDohInfo(getDohForwarder());
-    var step2;
-    if (scenario === 'dns-fwd') {
-        step2 = buildStep2DnsFwd(cfg, selectedServices, customDomains, fwdInfo);
-    } else if (scenario === 'tunnel') {
-        step2 = buildStep2Tunnel(cfg);
-    } else {
-        step2 = buildStep2NonRu(cfg, getSelectedExclusions(), fwdInfo);
-    }
-    setOutput('routing-output', step2);
-    document.getElementById('routing-section').style.display = 'block';
-
-    var uninstall = buildUninstall(cfg);
-    setOutput('uninstall-output', uninstall);
+    document.getElementById('uninstall-run-cmd').textContent = '/system/script/run ' + prefix + '-remove';
     document.getElementById('uninstall-section').style.display = 'block';
 
     document.getElementById('parsed-section').scrollIntoView({behavior:'smooth', block:'start'});
