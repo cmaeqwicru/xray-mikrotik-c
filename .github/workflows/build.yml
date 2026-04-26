@@ -9,40 +9,11 @@ on:
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/xray-mikrotik
+  XRAY_VERSION: v26.3.27
+  TUN2SOCKS_VERSION: v2.6.0
 
 jobs:
-  get-versions:
-    runs-on: ubuntu-latest
-    outputs:
-      xray_version: ${{ steps.xray.outputs.version }}
-      tun2socks_version: ${{ steps.tun2socks.outputs.version }}
-    steps:
-      - name: Последняя версия Xray-core
-        id: xray
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(curl -fsSL \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/XTLS/Xray-core/releases/latest \
-            | jq -r .tag_name)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Xray-core: ${VERSION}"
-
-      - name: Последняя версия tun2socks
-        id: tun2socks
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION=$(curl -fsSL \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/xjasonlyu/tun2socks/releases/latest \
-            | jq -r .tag_name)
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tun2socks: ${VERSION}"
-
   build:
-    needs: get-versions
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -70,14 +41,14 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           build-args: |
-            XRAY_VERSION=${{ needs.get-versions.outputs.xray_version }}
-            TUN2SOCKS_VERSION=${{ needs.get-versions.outputs.tun2socks_version }}
+            XRAY_VERSION=${{ env.XRAY_VERSION }}
+            TUN2SOCKS_VERSION=${{ env.TUN2SOCKS_VERSION }}
           tags: |
             ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ needs.get-versions.outputs.xray_version }}
+            ${{ env.IMAGE }}:${{ env.XRAY_VERSION }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            xray.version=${{ needs.get-versions.outputs.xray_version }}
-            tun2socks.version=${{ needs.get-versions.outputs.tun2socks_version }}
+            xray.version=${{ env.XRAY_VERSION }}
+            tun2socks.version=${{ env.TUN2SOCKS_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
