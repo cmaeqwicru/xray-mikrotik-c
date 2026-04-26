@@ -418,6 +418,14 @@
         </div>
 
         <div style="margin-top:14px">
+            <label for="image-tag" data-i18n="imageTagLabel">Версия образа</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <input type="text" id="image-tag" value="latest" placeholder="latest" style="width:140px">
+                <span style="font-size:12px;color:#6b7280">ghcr.io/cmaeqwicru/xray-mikrotik:<span id="image-tag-preview">latest</span></span>
+            </div>
+        </div>
+
+        <div style="margin-top:14px">
             <label for="storage-select" data-i18n="storageLabel">Хранилище контейнера</label>
             <select id="storage-select" onchange="onStorageChange()">
                 <option value="__auto" data-i18n="sAuto">Авто (usb1/ → disk1/)</option>
@@ -511,6 +519,7 @@ var I18N = {
         customDomainsLabel: 'Custom domains',
         netwatchLabel: 'Netwatch failover',
         netwatchHint: 'Monitors tunnel by pinging 1.1.1.1 through the container. If the container is unreachable, disables the route. Re-enables when it recovers.',
+        imageTagLabel: 'Image version',
         storageLabel: 'Container storage',
         sAuto: 'Auto (usb1/ → disk1/)',
         sDisk1: 'disk1/ — internal storage',
@@ -563,6 +572,7 @@ var I18N = {
         customDomainsLabel: 'Свои домены',
         netwatchLabel: 'Netwatch failover',
         netwatchHint: 'Мониторинг туннеля через пинг 1.1.1.1 через контейнер. Если контейнер недоступен, маршрут отключается, трафик идёт напрямую.',
+        imageTagLabel: 'Версия образа',
         storageLabel: 'Хранилище контейнера',
         sAuto: 'Авто (usb1/ → disk1/)',
         sDisk1: 'disk1/ — встроенная память',
@@ -719,6 +729,10 @@ function getScenario() {
     return 'dns-fwd';
 }
 function getPrefix() { return 'xray-vless'; }
+function getImageTag() {
+    var v = document.getElementById('image-tag').value.trim();
+    return v || 'latest';
+}
 function getStorage() {
     var sel = document.getElementById('storage-select').value;
     if (sel === '__custom') return document.getElementById('storage-custom').value.trim();
@@ -1051,7 +1065,7 @@ function buildStep1(cfg) {
         lines.push('');
     }
     lines.push('# --- Создание контейнера ---');
-    lines.push('/container add hostname=' + p + ' interface=' + p + '-veth envlist=' + p + '-env root-dir=' + getContainerRootDir(cfg.storage, p) + ' logging=yes start-on-boot=yes remote-image=ghcr.io/cmaeqwicru/xray-mikrotik:latest');
+    lines.push('/container add hostname=' + p + ' interface=' + p + '-veth envlist=' + p + '-env root-dir=' + getContainerRootDir(cfg.storage, p) + ' logging=yes start-on-boot=yes remote-image=ghcr.io/cmaeqwicru/xray-mikrotik:' + cfg.imageTag);
 
     lines.push('');
     lines.push('# --- Разрешить DNS запросы из контейнера ---');
@@ -1326,6 +1340,7 @@ function generate() {
         prefix:        prefix,
         routerIp:      routerIp,
         containerIp:   containerIp,
+        imageTag:      getImageTag(),
         storage:       getStorage(),
         serverAddress: parsed.host,
         serverPort:    parsed.port,
@@ -1363,6 +1378,9 @@ function generate() {
     setLang('ru');
     document.getElementById('doh-selector').addEventListener('change', function(e) {
         document.getElementById('doh-custom-url').style.display = e.target.value === '__custom' ? 'block' : 'none';
+    });
+    document.getElementById('image-tag').addEventListener('input', function() {
+        document.getElementById('image-tag-preview').textContent = this.value.trim() || 'latest';
     });
 })();
 </script>
